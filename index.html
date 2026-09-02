@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Painel de Endereços | Hospital Albert Sabin</title>
+    <meta
+      name="description"
+      content="Painel central para cadastrar, editar e acessar os endereços IP dos sistemas do Hospital Albert Sabin, com importação e exportação em CSV."
+    />
+    <meta name="author" content="Gustavo Barbosa" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Painel de Endereços | Hospital Albert Sabin" />
+    <meta
+      property="og:description"
+      content="Cadastre, edite e abra rapidamente os sistemas internos do hospital a partir de um único painel."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              display: ['"Space Grotesk"', "sans-serif"],
+              sans: ['"DM Sans"', "sans-serif"],
+              mono: ['"JetBrains Mono"', "monospace"],
+            },
+            colors: {
+              ink: "#0d1a20",
+              surface: "#152229",
+              surface2: "#1c2b33",
+              line: "#263a43",
+              teal: "#2ee0c8",
+              amber: "#f0b429",
+              muted: "#93a7b0",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        background-color: #0d1a20;
+        background-image:
+          radial-gradient(ellipse 80% 55% at 12% -10%, rgba(46, 224, 200, 0.13), transparent 70%),
+          radial-gradient(ellipse 60% 45% at 95% 0%, rgba(240, 180, 41, 0.09), transparent 70%);
+        background-attachment: fixed;
+      }
+      .grid-lines {
+        background-image:
+          linear-gradient(to right, rgba(38, 58, 67, 0.6) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(38, 58, 67, 0.6) 1px, transparent 1px);
+        background-size: 56px 56px;
+        -webkit-mask-image: linear-gradient(to bottom, black, transparent 65%);
+        mask-image: linear-gradient(to bottom, black, transparent 65%);
+      }
+      .card {
+        background: linear-gradient(160deg, #1c2b33, #152229);
+        border: 1px solid #263a43;
+        border-radius: 16px;
+        transition:
+          transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1),
+          border-color 0.25s,
+          box-shadow 0.25s;
+      }
+      .card.hoverable:hover {
+        transform: translateY(-3px);
+        border-color: rgba(46, 224, 200, 0.45);
+        box-shadow: 0 18px 40px -22px rgba(46, 224, 200, 0.55);
+      }
+      input,
+      select,
+      textarea {
+        background: #101c22;
+        border: 1px solid #263a43;
+        border-radius: 10px;
+        padding: 0.55rem 0.75rem;
+        color: #eaf2f4;
+        width: 100%;
+        outline: none;
+      }
+      input:focus,
+      select:focus,
+      textarea:focus {
+        border-color: #2ee0c8;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        border-radius: 10px;
+        padding: 0.55rem 0.9rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: 0.2s;
+      }
+      .btn-primary {
+        background: #2ee0c8;
+        color: #06231f;
+      }
+      .btn-primary:hover {
+        background: #4ee9d4;
+      }
+      .btn-outline {
+        border: 1px solid #263a43;
+        color: #eaf2f4;
+        background: transparent;
+      }
+      .btn-outline:hover {
+        background: #1c2b33;
+      }
+      dialog::backdrop {
+        background: rgba(5, 12, 16, 0.72);
+      }
+    </style>
+  </head>
+  <body class="min-h-screen text-[#eaf2f4] font-sans">
+    <div class="pointer-events-none absolute inset-x-0 top-0 h-[420px] grid-lines"></div>
+
+    <div class="relative mx-auto w-full max-w-6xl px-5 sm:px-8 pt-10 pb-16">
+      <header
+        class="flex flex-col gap-6 border-b border-line pb-8 sm:flex-row sm:items-end sm:justify-between"
+      >
+        <div>
+          <div
+            class="mb-3 inline-flex items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 font-mono text-[11px] uppercase tracking-[0.18em] text-muted"
+          >
+            <span class="text-teal">◈</span> Rede interna · TI
+          </div>
+          <h1 class="font-display text-3xl sm:text-4xl font-bold leading-tight">
+            Painel de Endereços
+            <span class="block text-teal">Hospital Albert Sabin</span>
+          </h1>
+          <p class="mt-3 max-w-lg text-sm text-muted">
+            Centralize os IPs de cada sistema e abra o serviço em um clique.
+          </p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <input id="file" type="file" accept=".csv" class="hidden" style="display: none" />
+          <button class="btn btn-outline" onclick="document.getElementById('file').click()">
+            ↑ Importar CSV
+          </button>
+          <button class="btn btn-outline" onclick="exportCSV()">↓ Exportar CSV</button>
+          <button class="btn btn-outline" onclick="configApi()">⚙ API</button>
+          <button class="btn btn-primary" onclick="openForm()">+ Novo serviço</button>
+        </div>
+      </header>
+
+      <section id="stats" class="mt-8 grid grid-cols-3 gap-3"></section>
+
+      <section class="mt-8 flex flex-col gap-3 sm:flex-row">
+        <input id="q" placeholder="Buscar por nome, IP ou descrição..." oninput="render()" />
+        <select id="cat" onchange="render()" class="sm:w-56"></select>
+      </section>
+
+      <section id="grid" class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"></section>
+
+      <footer class="mt-16 border-t border-line pt-6 text-center">
+        <p class="font-mono text-xs uppercase tracking-[0.2em] text-muted">
+          Desenvolvido por Gustavo Barbosa
+        </p>
+      </footer>
+    </div>
+
+    <dialog id="dlg" class="card w-[min(92vw,34rem)] p-6 text-[#eaf2f4]">
+      <h2 id="dlgTitle" class="font-display text-xl font-semibold">Novo serviço</h2>
+      <p class="mt-1 text-sm text-muted">Informe o endereço de rede utilizado para acessar o sistema.</p>
+      <div class="mt-5 grid gap-4">
+        <div>
+          <label class="text-sm">Nome do serviço</label>
+          <input id="f_name" placeholder="FindFace" class="mt-1" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-sm">Categoria</label>
+            <select id="f_category" class="mt-1"></select>
+          </div>
+          <div>
+            <label class="text-sm">Protocolo</label>
+            <select id="f_protocol" class="mt-1">
+              <option value="http">http</option>
+              <option value="https">https</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-3 gap-3">
+          <div class="col-span-2">
+            <label class="text-sm">Endereço / IP</label>
+            <input id="f_address" placeholder="10.40.0.23" class="mt-1 font-mono" />
+          </div>
+          <div>
+            <label class="text-sm">Porta</label>
+            <input id="f_port" placeholder="8080" class="mt-1 font-mono" />
+          </div>
+        </div>
+        <div>
+          <label class="text-sm">Caminho (opcional)</label>
+          <input id="f_path" placeholder="/login" class="mt-1 font-mono" />
+        </div>
+        <div>
+          <label class="text-sm">Descrição</label>
+          <textarea id="f_description" rows="2" class="mt-1"></textarea>
+        </div>
+      </div>
+      <div class="mt-6 flex justify-end gap-2">
+        <button class="btn btn-outline" onclick="document.getElementById('dlg').close()">Cancelar</button>
+        <button class="btn btn-primary" onclick="submitForm()">Salvar</button>
+      </div>
+    </dialog>
+
+    <script>
+      const KEY = "has-services-v1";
+      const API_KEY = "has-api-base";
+      const CATEGORIES = ["Segurança", "Clínico", "Administrativo", "Infraestrutura", "Imagem", "Outros"];
+      let items = [];
+      let editingId = null;
+      const apiBase = () => localStorage.getItem(API_KEY) || "";
+
+      const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+
+      function seed() {
+        return [
+          {
+            id: uid(),
+            name: "FindFace",
+            category: "Segurança",
+            protocol: "http",
+            address: "10.40.0.23",
+            port: "",
+            path: "",
+            description: "Reconhecimento facial – controle de acesso",
+            favorite: true,
+          },
+        ];
+      }
+
+      async function load() {
+        if (apiBase()) {
+          try {
+            const r = await fetch(apiBase() + "/api/services");
+            items = await r.json();
+            return;
+          } catch (e) {
+            alert("Falha ao conectar na API. Usando dados locais.");
+          }
+        }
+        const raw = localStorage.getItem(KEY);
+        items = raw ? JSON.parse(raw) : seed();
+        if (!raw) persistLocal();
+      }
+      const persistLocal = () => localStorage.setItem(KEY, JSON.stringify(items));
+
+      async function save(record) {
+        if (apiBase()) {
+          const url = apiBase() + "/api/services" + (record.id && editingId ? "/" + record.id : "");
+          await fetch(url, {
+            method: editingId ? "PUT" : "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(record),
+          });
+          await load();
+        } else {
+          if (editingId) items = items.map((i) => (i.id === editingId ? { ...i, ...record } : i));
+          else items.push({ ...record, id: uid(), favorite: false });
+          persistLocal();
+        }
+        render();
+      }
+
+      async function removeItem(id) {
+        if (!confirm("Excluir este serviço?")) return;
+        if (apiBase()) {
+          await fetch(apiBase() + "/api/services/" + id, { method: "DELETE" });
+          await load();
+        } else {
+          items = items.filter((i) => i.id !== id);
+          persistLocal();
+        }
+        render();
+      }
+
+      async function toggleFav(id) {
+        const s = items.find((i) => i.id === id);
+        s.favorite = !s.favorite;
+        if (apiBase()) {
+          await fetch(apiBase() + "/api/services/" + id, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(s),
+          });
+        } else persistLocal();
+        render();
+      }
+
+      const buildUrl = (s) =>
+        `${s.protocol}://${s.address}${s.port ? ":" + s.port : ""}${
+          s.path ? (s.path.startsWith("/") ? s.path : "/" + s.path) : ""
+        }`;
+
+      function render() {
+        const q = (document.getElementById("q").value || "").toLowerCase().trim();
+        const catSel = document.getElementById("cat");
+        const cats = ["Todos", ...new Set(items.map((i) => i.category))];
+        const current = catSel.value || "Todos";
+        catSel.innerHTML = cats.map((c) => `<option ${c === current ? "selected" : ""}>${c}</option>`).join("");
+
+        document.getElementById("stats").innerHTML = [
+          ["Serviços", items.length],
+          ["Favoritos", items.filter((i) => i.favorite).length],
+          ["Categorias", cats.length - 1],
+        ]
+          .map(
+            ([l, v]) => `<div class="card px-4 py-4">
+              <p class="font-display text-2xl font-semibold">${v}</p>
+              <p class="text-xs text-muted">${l}</p></div>`,
+          )
+          .join("");
+
+        const list = items
+          .filter((i) => (current === "Todos" ? true : i.category === current))
+          .filter((i) =>
+            !q ? true : [i.name, i.address, i.description || "", i.category].join(" ").toLowerCase().includes(q),
+          )
+          .sort((a, b) => Number(b.favorite) - Number(a.favorite) || a.name.localeCompare(b.name));
+
+        document.getElementById("grid").innerHTML = list.length
+          ? list
+              .map((s) => {
+                const url = buildUrl(s);
+                return `<article class="card hoverable flex flex-col p-5">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <p class="font-mono text-[11px] uppercase tracking-[0.16em] text-teal">${s.category}</p>
+                    <h2 class="mt-1 truncate font-display text-lg font-semibold">${s.name}</h2>
+                  </div>
+                  <button title="Favoritar" onclick="toggleFav('${s.id}')" class="p-1 ${
+                    s.favorite ? "text-amber" : "text-muted"
+                  }">★</button>
+                </div>
+                <p class="mt-3 truncate font-mono text-sm text-muted">${url}</p>
+                ${s.description ? `<p class="mt-2 text-sm text-muted">${s.description}</p>` : ""}
+                <div class="mt-5 flex items-center gap-2 border-t border-line pt-4">
+                  <a class="btn btn-primary flex-1 justify-center" href="${url}" target="_blank" rel="noreferrer">Abrir</a>
+                  <button class="btn btn-outline" title="Copiar" onclick="navigator.clipboard.writeText('${url}')">⧉</button>
+                  <button class="btn btn-outline" title="Editar" onclick="openForm('${s.id}')">✎</button>
+                  <button class="btn btn-outline" title="Excluir" onclick="removeItem('${s.id}')">🗑</button>
+                </div>
+              </article>`;
+              })
+              .join("")
+          : `<div class="card col-span-full px-6 py-14 text-center text-sm text-muted">Nenhum serviço encontrado. Cadastre o primeiro endereço.</div>`;
+      }
+
+      function openForm(id) {
+        editingId = id || null;
+        const s = id ? items.find((i) => i.id === id) : {};
+        document.getElementById("f_category").innerHTML = CATEGORIES.map(
+          (c) => `<option ${s.category === c ? "selected" : ""}>${c}</option>`,
+        ).join("");
+        document.getElementById("dlgTitle").textContent = id ? "Editar serviço" : "Novo serviço";
+        f_name.value = s.name || "";
+        f_protocol.value = s.protocol || "http";
+        f_address.value = s.address || "";
+        f_port.value = s.port || "";
+        f_path.value = s.path || "";
+        f_description.value = s.description || "";
+        document.getElementById("dlg").showModal();
+      }
+
+      function submitForm() {
+        if (!f_name.value.trim() || !f_address.value.trim()) {
+          alert("Informe ao menos o nome e o endereço/IP.");
+          return;
+        }
+        save({
+          id: editingId,
+          name: f_name.value.trim(),
+          category: document.getElementById("f_category").value,
+          protocol: f_protocol.value,
+          address: f_address.value.trim(),
+          port: f_port.value.trim(),
+          path: f_path.value.trim(),
+          description: f_description.value.trim(),
+          favorite: editingId ? items.find((i) => i.id === editingId).favorite : false,
+        });
+        document.getElementById("dlg").close();
+      }
+
+      function configApi() {
+        const v = prompt(
+          "URL da API (deixe vazio para usar apenas o navegador):\nex: http://10.40.0.10:3333",
+          apiBase(),
+        );
+        if (v === null) return;
+        v.trim() ? localStorage.setItem(API_KEY, v.trim().replace(/\/$/, "")) : localStorage.removeItem(API_KEY);
+        load().then(render);
+      }
+
+      const HEADERS = ["name", "category", "protocol", "address", "port", "path", "description", "favorite"];
+      const esc = (v) => (/[",;\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v);
+
+      function exportCSV() {
+        const csv = [
+          HEADERS.join(","),
+          ...items.map((s) => HEADERS.map((h) => esc(String(s[h] ?? ""))).join(",")),
+        ].join("\n");
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
+        a.download = "enderecos-hospital-albert-sabin.csv";
+        a.click();
+      }
+
+      function parseLine(line) {
+        const out = [];
+        let cur = "",
+          quoted = false;
+        for (let i = 0; i < line.length; i++) {
+          const c = line[i];
+          if (quoted) {
+            if (c === '"' && line[i + 1] === '"') {
+              cur += '"';
+              i++;
+            } else if (c === '"') quoted = false;
+            else cur += c;
+          } else if (c === '"') quoted = true;
+          else if (c === "," || c === ";") {
+            out.push(cur);
+            cur = "";
+          } else cur += c;
+        }
+        out.push(cur);
+        return out.map((v) => v.trim());
+      }
+
+      document.getElementById("file").addEventListener("change", async (e) => {
+        const f = e.target.files[0];
+        if (!f) return;
+        const lines = (await f.text()).split(/\r?\n/).filter((l) => l.trim());
+        const head = parseLine(lines[0]).map((h) => h.toLowerCase());
+        const hasHeader = head.includes("address") || head.includes("name");
+        const body = hasHeader ? lines.slice(1) : lines;
+        let n = 0;
+        for (const line of body) {
+          const c = parseLine(line);
+          const get = (k, i) => (hasHeader ? (c[head.indexOf(k)] ?? "") : (c[i] ?? ""));
+          const rec = {
+            name: get("name", 0) || "Sem nome",
+            category: get("category", 1) || "Outros",
+            protocol: get("protocol", 2).toLowerCase() === "https" ? "https" : "http",
+            address: get("address", 3),
+            port: get("port", 4),
+            path: get("path", 5),
+            description: get("description", 6),
+            favorite: get("favorite", 7).toLowerCase() === "true",
+          };
+          if (!rec.address) continue;
+          editingId = null;
+          if (apiBase()) {
+            await fetch(apiBase() + "/api/services", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(rec),
+            });
+          } else items.push({ ...rec, id: uid() });
+          n++;
+        }
+        if (apiBase()) await load();
+        else persistLocal();
+        render();
+        alert(n + " serviço(s) importado(s).");
+        e.target.value = "";
+      });
+
+      load().then(render);
+    </script>
+  </body>
+</html>
