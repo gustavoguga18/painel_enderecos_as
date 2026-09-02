@@ -66,3 +66,4 @@ FindFace,Segurança,http,10.40.0.23,,,Reconhecimento facial,true
 # controlip
 # controlip
 # painel_enderecos_as
+# painel_enderecos_as
